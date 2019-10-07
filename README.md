@@ -13,3 +13,10 @@ Clone the repo and run
 cargo build --release
 ```
 
+### With [vim-plug](https://github.com/junegunn/vim-plug)
+
+```
+Plug 'tsufeki/asyncomplete-fuzzy-match', {
+    \ 'do': 'cargo build --release',
+    \ }
+```
