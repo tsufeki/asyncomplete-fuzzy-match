@@ -8,7 +8,7 @@ use std::vec::Vec;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct CompletionItem {
-    abbr: String,
+    word: String,
 
     #[serde(flatten)]
     rest: HashMap<String, Value>,
@@ -25,12 +25,16 @@ fn rank_item<'a>(
     pattern: &str,
     priority: i64,
 ) -> Option<Ranked<'a, CompletionItem>> {
+    let mut candidate: String = item.word.clone();
     let prefix: &str = &pattern[0..2];
-    if !item.abbr.starts_with(prefix) {
+    if let Some(Value::String(abbr)) = item.rest.get("abbr") {
+        candidate = abbr.clone();
+    }
+    if !candidate.starts_with(prefix) {
         return None;
     }
 
-    fuzzy_match(&item.abbr, &pattern).map(|rank| Ranked {
+    fuzzy_match(&candidate, &pattern).map(|rank| Ranked {
         item,
         rank,
         priority,
