@@ -25,6 +25,11 @@ fn rank_item<'a>(
     pattern: &str,
     priority: i64,
 ) -> Option<Ranked<'a, CompletionItem>> {
+    let prefix: &str = &pattern[0..2];
+    if !item.abbr.starts_with(prefix) {
+        return None;
+    }
+
     fuzzy_match(&item.abbr, &pattern).map(|rank| Ranked {
         item,
         rank,
