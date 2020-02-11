@@ -25,11 +25,12 @@ fn rank_item<'a>(
     pattern: &str,
     priority: i64,
 ) -> Option<Ranked<'a, CompletionItem>> {
-    let mut candidate: String = item.word.clone();
-    let prefix: &str = &pattern[0..2];
+    let mut candidate: &String = &item.word;
     if let Some(Value::String(abbr)) = item.rest.get("abbr") {
-        candidate = abbr.clone();
+        candidate = &abbr;
     }
+
+    let prefix: &str = &pattern[0..2];
     if !candidate.starts_with(prefix) {
         return None;
     }
