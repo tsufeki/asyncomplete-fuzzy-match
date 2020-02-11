@@ -30,8 +30,7 @@ fn rank_item<'a>(
         candidate = &abbr;
     }
 
-    let prefix: &str = &pattern[0..2];
-    if !candidate.starts_with(prefix) {
+    if pattern.chars().count() < 2 || !candidate.starts_with(&pattern[0..2]) {
         return None;
     }
 
