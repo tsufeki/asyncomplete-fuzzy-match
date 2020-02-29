@@ -30,7 +30,12 @@ fn rank_item<'a>(
         candidate = &abbr;
     }
 
-    if pattern.chars().count() < 2 || !candidate.starts_with(&pattern[0..2]) {
+    let mut count = pattern.chars().count();
+    if count > 2 {
+        count = 2;
+    }
+
+    if !candidate.starts_with(&pattern[0..count]) {
         return None;
     }
 
