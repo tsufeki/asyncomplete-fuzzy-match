@@ -1,6 +1,6 @@
 let s:job_id = -1
-let s:complete_options = {}
 let s:buffer = ''
+let s:complete_options_queue = []
 
 function! asyncomplete_fuzzy_match#start() abort
   call s:start_process()
@@ -18,7 +18,6 @@ endfunction
 
 function! asyncomplete_fuzzy_match#preprocessor(options, matches) abort
   if s:job_id >= 0
-    let s:complete_options = a:options
     let l:completions = {
       \   'pattern': a:options.base,
       \   'lists': [],
@@ -29,6 +28,7 @@ function! asyncomplete_fuzzy_match#preprocessor(options, matches) abort
         \   'priority': get(g:asyncomplete_fuzzy_match_priorities, l:source_name, 0),
         \ })
     endfor
+    call add(s:complete_options_queue, a:options)
     call async#job#send(s:job_id, json_encode(l:completions) . "\n")
   else
     let l:items = []
@@ -47,12 +47,14 @@ function! s:handle_response(data) abort
   for l:chunk in a:data
     if l:chunk !=# ''
       let s:buffer .= l:chunk
-    elseif s:buffer !=# ''
-      if !empty(s:complete_options)
-        call asyncomplete#preprocess_complete(s:complete_options, json_decode(s:buffer))
-      endif " else drop response
+    else
+      if !empty(s:complete_options_queue)
+        let l:complete_options = remove(s:complete_options_queue, 0)
+        if s:buffer !=# ''
+          call asyncomplete#preprocess_complete(l:complete_options, json_decode(s:buffer))
+        endif
+      endif
       let s:buffer = ''
-      let s:complete_options = {}
     endif
   endfor
 endfunction
@@ -60,7 +62,7 @@ endfunction
 function! s:handle_exit() abort
   let s:job_id = -1
   let s:buffer = ''
-  let s:complete_options = {}
+  let s:complete_options_queue = []
 endfunction
 
 " vim: set ts=2 sts=2 sw=2 :
