@@ -7,6 +7,19 @@ use fuzzy_matcher::{skim::SkimMatcherV2, FuzzyMatcher};
 use serde::{Deserialize, Serialize};
 use serde_json::{from_str, to_writer, Value};
 
+#[derive(Deserialize)]
+struct Completions {
+    id: i64,
+    pattern: String,
+    lists: Vec<CompletionList>,
+}
+
+#[derive(Deserialize)]
+struct CompletionList {
+    items: Vec<CompletionItem>,
+    priority: i64,
+}
+
 #[derive(Serialize, Deserialize)]
 struct CompletionItem {
     word: String,
@@ -50,20 +63,14 @@ impl<'a, M: FuzzyMatcher> Ranker<'a, M> {
     }
 }
 
-#[derive(Deserialize)]
-struct CompletionList {
-    items: Vec<CompletionItem>,
-    priority: i64,
-}
-
-#[derive(Deserialize)]
-struct Completions {
-    pattern: String,
-    lists: Vec<CompletionList>,
+#[derive(Serialize)]
+struct FilteredCompletions<'a> {
+    id: i64,
+    items: Vec<&'a CompletionItem>,
 }
 
 impl Completions {
-    pub fn filter(&self) -> Vec<&CompletionItem> {
+    pub fn filter(&self) -> FilteredCompletions {
         let ranker = Ranker::new(&self.pattern, SkimMatcherV2::default());
 
         let mut ranked: Vec<Ranked<CompletionItem>> = self
@@ -76,7 +83,10 @@ impl Completions {
 
         ranked.sort_unstable_by_key(|item| (-item.priority, -item.rank));
 
-        ranked.iter().map(|item| item.item).collect()
+        FilteredCompletions {
+            id: self.id,
+            items: ranked.iter().map(|item| item.item).collect(),
+        }
     }
 }
 
@@ -91,5 +101,6 @@ fn main() {
             to_writer(output.lock(), &items).unwrap();
         }
         output.write_all(b"\n").unwrap();
+        output.flush().unwrap();
     }
 }

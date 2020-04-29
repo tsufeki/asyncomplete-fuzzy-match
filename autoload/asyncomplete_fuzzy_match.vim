@@ -1,6 +1,7 @@
 let s:job_id = -1
 let s:buffer = ''
-let s:complete_options_queue = []
+let s:complete_options = {}
+let s:last_id = 0
 
 function! asyncomplete_fuzzy_match#start() abort
   call s:start_process()
@@ -18,7 +19,10 @@ endfunction
 
 function! asyncomplete_fuzzy_match#preprocessor(options, matches) abort
   if s:job_id >= 0
+    let s:complete_options = a:options
+    let s:last_id += 1
     let l:completions = {
+      \   'id': s:last_id,
       \   'pattern': a:options.base,
       \   'lists': [],
       \ }
@@ -28,7 +32,6 @@ function! asyncomplete_fuzzy_match#preprocessor(options, matches) abort
         \   'priority': get(g:asyncomplete_fuzzy_match_priorities, l:source_name, 0),
         \ })
     endfor
-    call add(s:complete_options_queue, a:options)
     call async#job#send(s:job_id, json_encode(l:completions) . "\n")
   else
     let l:items = []
@@ -44,25 +47,24 @@ function! asyncomplete_fuzzy_match#preprocessor(options, matches) abort
 endfunction
 
 function! s:handle_response(data) abort
-  for l:chunk in a:data
-    if l:chunk !=# ''
-      let s:buffer .= l:chunk
-    else
-      if !empty(s:complete_options_queue)
-        let l:complete_options = remove(s:complete_options_queue, 0)
-        if s:buffer !=# ''
-          call asyncomplete#preprocess_complete(l:complete_options, json_decode(s:buffer))
-        endif
+  " Newline is our delimiter: a:data was split(), so there was a newline
+  " between every two chunks (and only between, not before first or after last)
+  let s:buffer .= a:data[0]
+  for l:chunk in a:data[1:]
+    if !empty(s:complete_options) && s:buffer !=# ''
+      let l:response = json_decode(s:buffer)
+      if s:last_id == l:response['id']
+        call asyncomplete#preprocess_complete(s:complete_options, l:response['items'])
       endif
-      let s:buffer = ''
     endif
+    let s:buffer = l:chunk
   endfor
 endfunction
 
 function! s:handle_exit() abort
   let s:job_id = -1
   let s:buffer = ''
-  let s:complete_options_queue = []
+  let s:complete_options = {}
 endfunction
 
 " vim: set ts=2 sts=2 sw=2 :
