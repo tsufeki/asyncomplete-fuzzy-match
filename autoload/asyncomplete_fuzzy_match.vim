@@ -47,8 +47,10 @@ function! s:handle_response(data) abort
   for l:chunk in a:data
     if l:chunk !=# ''
       let s:buffer .= l:chunk
-    elseif s:buffer !=# '' && !empty(s:complete_options)
-      call asyncomplete#preprocess_complete(s:complete_options, json_decode(s:buffer))
+    elseif s:buffer !=# ''
+      if !empty(s:complete_options)
+        call asyncomplete#preprocess_complete(s:complete_options, json_decode(s:buffer))
+      endif " else drop response
       let s:buffer = ''
       let s:complete_options = {}
     endif
